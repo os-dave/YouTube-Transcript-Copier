@@ -17,6 +17,7 @@ A simple Tampermonkey userscript that adds a "Copy Transcript" button to YouTube
    - Create a new script (+ tab)
    - Copy and paste the entire [youtubeTranscriptCopier.js](youtubeTranscriptCopier.js) script
    - Save (Ctrl+S or File → Save)
+   - Refresh any YouTube page you currently have open
 
 ## Usage
 
