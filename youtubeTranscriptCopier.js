@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      1.1
 // @description  Adds a copy button to YouTube transcripts
-// @author       You
+// @author       @php100 on X.com
 // @match        https://www.youtube.com/*
 // @grant        GM_setClipboard
 // ==/UserScript==
