@@ -14,6 +14,58 @@
   console.log("YouTube Transcript Copier script loaded");
 
   let copyButtonAdded = false;
+  let currentVideoId = null;
+
+  function getVideoIdFromUrl() {
+    const url = window.location.href;
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get("v");
+  }
+
+  function handleVideoChange() {
+    const newVideoId = getVideoIdFromUrl();
+
+    if (newVideoId !== currentVideoId) {
+      console.log("Video changed, resetting button state");
+      copyButtonAdded = false;
+      currentVideoId = newVideoId;
+
+      const existingButton = document.querySelector(".transcript-copy-button");
+      if (existingButton) {
+        existingButton.remove();
+      }
+
+      if (currentVideoId) {
+        checkForTranscriptPanel();
+      }
+    }
+  }
+
+  function checkForTranscriptPanel() {
+    if (window.transcriptCheckInterval) {
+      clearInterval(window.transcriptCheckInterval);
+    }
+
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    window.transcriptCheckInterval = setInterval(() => {
+      attempts++;
+
+      const transcriptPanel = document.querySelector(
+        'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
+      );
+
+      if (transcriptPanel) {
+        console.log("Transcript panel found, attempting to add button");
+        startButtonAdditionAttempts();
+        clearInterval(window.transcriptCheckInterval);
+      } else if (attempts >= maxAttempts) {
+        console.log("Gave up looking for transcript panel after 30 seconds");
+        clearInterval(window.transcriptCheckInterval);
+      }
+    }, 500);
+  }
 
   function formatTranscript(data) {
     return data
@@ -79,21 +131,18 @@
 
     console.log("Attempting to add copy button...");
 
-    // Look for the transcript panel header
     const header = document.querySelector(
       'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"] ytd-engagement-panel-title-header-renderer'
     );
-
-    console.log("Header found:", !!header);
 
     if (!header) {
       console.log("Header not found, retrying...");
       return;
     }
 
-    // Create the copy button
     const copyBtn = document.createElement("button");
     copyBtn.textContent = "Copy Transcript";
+    copyBtn.className = "transcript-copy-button";
 
     // Apply styles individually to avoid innerHTML manipulation
     Object.assign(copyBtn.style, {
@@ -196,31 +245,75 @@
     document.body.removeChild(textarea);
   }
 
-  // Make the checks more aggressive
-  const checkIntervals = [100, 300, 500, 1000, 2000, 3000, 5000, 7000, 10000];
-  for (const ms of checkIntervals) {
-    setTimeout(() => {
-      if (!copyButtonAdded) {
-        addCopyButton();
-      }
-    }, ms);
+  function startButtonAdditionAttempts() {
+    if (window.buttonAttemptTimeouts) {
+      window.buttonAttemptTimeouts.forEach((timeout) => clearTimeout(timeout));
+    }
+    window.buttonAttemptTimeouts = [];
+
+    const checkIntervals = [100, 300, 500, 1000, 2000, 3000, 5000];
+    for (const ms of checkIntervals) {
+      const timeout = setTimeout(() => {
+        if (!copyButtonAdded) {
+          addCopyButton();
+        }
+      }, ms);
+      window.buttonAttemptTimeouts.push(timeout);
+    }
   }
 
-  // Watch for changes to detect when transcript panel is added
-  new MutationObserver(() => {
-    if (!copyButtonAdded) {
-      addCopyButton();
+  window.addEventListener("yt-navigate-start", () => {
+    copyButtonAdded = false;
+    const existingButton = document.querySelector(".transcript-copy-button");
+    if (existingButton) {
+      existingButton.remove();
+    }
+
+    if (window.transcriptCheckInterval) {
+      clearInterval(window.transcriptCheckInterval);
+    }
+    if (window.buttonAttemptTimeouts) {
+      window.buttonAttemptTimeouts.forEach((timeout) => clearTimeout(timeout));
+    }
+  });
+
+  window.addEventListener("yt-navigate-finish", () => {
+    handleVideoChange();
+  });
+
+  const pushState = history.pushState;
+  history.pushState = function () {
+    pushState.apply(history, arguments);
+    handleVideoChange();
+  };
+
+  const replaceState = history.replaceState;
+  history.replaceState = function () {
+    replaceState.apply(history, arguments);
+    handleVideoChange();
+  };
+
+  window.addEventListener("popstate", () => {
+    handleVideoChange();
+  });
+
+  handleVideoChange();
+
+  new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      if (mutation.addedNodes.length) {
+        const transcriptPanel = document.querySelector(
+          'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
+        );
+        if (transcriptPanel && !copyButtonAdded && getVideoIdFromUrl()) {
+          console.log("Transcript panel detected by MutationObserver");
+          startButtonAdditionAttempts();
+          break;
+        }
+      }
     }
   }).observe(document.body, {
     childList: true,
     subtree: true,
   });
-
-  // Reset button state on navigation
-  window.addEventListener("yt-navigate-start", () => {
-    copyButtonAdded = false;
-  });
-
-  // Try to add button after navigation
-  window.addEventListener("yt-navigate-finish", addCopyButton);
 })();
