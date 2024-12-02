@@ -34,37 +34,7 @@
       if (existingButton) {
         existingButton.remove();
       }
-
-      if (currentVideoId) {
-        checkForTranscriptPanel();
-      }
     }
-  }
-
-  function checkForTranscriptPanel() {
-    if (window.transcriptCheckInterval) {
-      clearInterval(window.transcriptCheckInterval);
-    }
-
-    let attempts = 0;
-    const maxAttempts = 60;
-
-    window.transcriptCheckInterval = setInterval(() => {
-      attempts++;
-
-      const transcriptPanel = document.querySelector(
-        'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
-      );
-
-      if (transcriptPanel) {
-        console.log("Transcript panel found, attempting to add button");
-        startButtonAdditionAttempts();
-        clearInterval(window.transcriptCheckInterval);
-      } else if (attempts >= maxAttempts) {
-        console.log("Gave up looking for transcript panel after 30 seconds");
-        clearInterval(window.transcriptCheckInterval);
-      }
-    }, 500);
   }
 
   function formatTranscript(data) {
@@ -136,7 +106,7 @@
     );
 
     if (!header) {
-      console.log("Header not found, retrying...");
+      console.log("Header not found");
       return;
     }
 
@@ -245,35 +215,12 @@
     document.body.removeChild(textarea);
   }
 
-  function startButtonAdditionAttempts() {
-    if (window.buttonAttemptTimeouts) {
-      window.buttonAttemptTimeouts.forEach((timeout) => clearTimeout(timeout));
-    }
-    window.buttonAttemptTimeouts = [];
-
-    const checkIntervals = [100, 300, 500, 1000, 2000, 3000, 5000];
-    for (const ms of checkIntervals) {
-      const timeout = setTimeout(() => {
-        if (!copyButtonAdded) {
-          addCopyButton();
-        }
-      }, ms);
-      window.buttonAttemptTimeouts.push(timeout);
-    }
-  }
-
+  // Event listeners for navigation
   window.addEventListener("yt-navigate-start", () => {
     copyButtonAdded = false;
     const existingButton = document.querySelector(".transcript-copy-button");
     if (existingButton) {
       existingButton.remove();
-    }
-
-    if (window.transcriptCheckInterval) {
-      clearInterval(window.transcriptCheckInterval);
-    }
-    if (window.buttonAttemptTimeouts) {
-      window.buttonAttemptTimeouts.forEach((timeout) => clearTimeout(timeout));
     }
   });
 
@@ -297,23 +244,47 @@
     handleVideoChange();
   });
 
-  handleVideoChange();
-
-  new MutationObserver((mutations) => {
+  // New optimized MutationObserver
+  const transcriptObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       if (mutation.addedNodes.length) {
         const transcriptPanel = document.querySelector(
           'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]'
         );
         if (transcriptPanel && !copyButtonAdded && getVideoIdFromUrl()) {
-          console.log("Transcript panel detected by MutationObserver");
-          startButtonAdditionAttempts();
+          console.log("Transcript panel detected");
+          addCopyButton();
           break;
         }
       }
     }
-  }).observe(document.body, {
-    childList: true,
-    subtree: true,
   });
+
+  // New function to handle transcript button clicks
+  function handleTranscriptButtonClick(event) {
+    const button = event.target.closest("button");
+    if (
+      button &&
+      button.querySelector(".yt-core-attributed-string")?.textContent ===
+        "Show transcript"
+    ) {
+      console.log("Show transcript button clicked");
+      // Start observing for transcript panel
+      transcriptObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+      });
+
+      // Stop observing after 5 seconds if transcript panel hasn't appeared
+      setTimeout(() => {
+        transcriptObserver.disconnect();
+      }, 5000);
+    }
+  }
+
+  // Add click listener for the transcript button
+  document.addEventListener("click", handleTranscriptButtonClick, true);
+
+  // Initial setup
+  handleVideoChange();
 })();
