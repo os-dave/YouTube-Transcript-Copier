@@ -1,0 +1,21 @@
+.transcript-copy-btn {
+  background: #065fd4;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin: 8px;
+  font-family: Roboto, Arial, sans-serif;
+}
+
+.transcript-copy-btn:hover {
+  background: #0056bf;
+}
+
+@media screen and (max-width: 1014px) {
+  .transcript-copy-btn {
+    width: calc(100% - 16px); /* Full width minus margins */
+    box-sizing: border-box;
+  }
+}
