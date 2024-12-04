@@ -2,7 +2,7 @@
 
 A simple Tampermonkey userscript that adds a "Copy Transcript" button to YouTube's transcript panel.
 
-![Copy Transcript Button Example](example.png)
+![Copy Transcript Button Example](preview.png)
 
 ## Installation
 
