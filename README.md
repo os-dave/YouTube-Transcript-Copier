@@ -2,7 +2,7 @@
 
 A Chrome extension that adds a convenient "Copy Transcript" button to YouTube's transcript panel, allowing you to easily copy video transcripts with or without timestamps.
 
-![Copy Transcript Button Example](preview.png)
+![Copy Transcript Button Example](example.gif)
 
 ## Features
 
